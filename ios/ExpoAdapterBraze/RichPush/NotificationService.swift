@@ -75,10 +75,12 @@
       private func getActivityAttributesFromConfig() -> [String]? {
         guard let plistDict = Bundle.main.infoDictionary,
               let brazeConfig = plistDict["Braze"] as? [String: Any],
-              let activityAttributes = brazeConfig["LiveActivityAttributes"] as? [String] else {
+              let activityAttributesString = brazeConfig["LiveActivityAttributes"] as? String,
+              !activityAttributesString.isEmpty else {
           return nil
         }
-        return activityAttributes
+        // Parse comma-separated string into array
+        return activityAttributesString.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }
       }
       
       /// Configure Braze instance with API key and endpoint from Info.plist

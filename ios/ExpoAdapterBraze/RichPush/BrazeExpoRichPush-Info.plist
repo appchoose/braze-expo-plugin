@@ -8,6 +8,8 @@
 			<string>$(BRAZE_API_KEY)</string>
 			<key>Endpoint</key>
 			<string>$(BRAZE_ENDPOINT)</string>
+			<key>LiveActivityAttributes</key>
+			<string>$(BRAZE_LIVE_ACTIVITY_ATTRIBUTES)</string>
 		</dict>
 		<key>CFBundleDevelopmentRegion</key>
 		<string>$(DEVELOPMENT_LANGUAGE)</string>
