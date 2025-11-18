@@ -191,6 +191,12 @@ const withBrazeXcodeProject: ConfigPlugin<ConfigProps> = (config, props) => {
         for (const configUUID of Object.keys(xcconfigs)) {
           const buildSettings = xcconfigs[configUUID].buildSettings;
           if (buildSettings && buildSettings.PRODUCT_NAME === `"${BRAZE_IOS_RICH_PUSH_TARGET}"`) {
+            if (props.iosApiKey) {
+              buildSettings.BRAZE_API_KEY = props.iosApiKey;
+            }
+            if (props.baseUrl) {
+              buildSettings.BRAZE_ENDPOINT = props.baseUrl;
+            }
             buildSettings.SWIFT_VERSION = swiftVersion;
             buildSettings.CODE_SIGN_ENTITLEMENTS = `${BRAZE_IOS_RICH_PUSH_TARGET}/${BRAZE_IOS_RICH_PUSH_TARGET}.entitlements`;
             if (codeSignStyle) { buildSettings.CODE_SIGN_STYLE = codeSignStyle; }
@@ -312,6 +318,40 @@ const withBrazeDangerousMod: ConfigPlugin<ConfigProps> = (config, props) => {
         }
         for (const file of BRAZE_IOS_RICH_PUSH_FILES) {
           fs.copyFileSync(`${sourcePath}/${file}`, `${destinationPath}/${file}`);
+        }
+
+        // Add LiveActivityAttributes to Info.plist if provided (arrays can't be set via build settings)
+        if (props.liveActivityAttributes != null && props.liveActivityAttributes.length > 0) {
+          const extensionInfoPlistPath = `${destinationPath}/${BRAZE_IOS_RICH_PUSH_TARGET}-Info.plist`;
+          if (fs.existsSync(extensionInfoPlistPath)) {
+            let plistContent = fs.readFileSync(extensionInfoPlistPath, 'utf8');
+            
+            // Helper function to escape XML special characters
+            const escapeXml = (str: string): string => {
+              return str
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&apos;');
+            };
+            
+            // Remove existing LiveActivityAttributes if present
+            plistContent = plistContent.replace(/<key>LiveActivityAttributes<\/key>\s*<array>[\s\S]*?<\/array>/g, '');
+            
+            // Build LiveActivityAttributes array XML
+            let attributesXml = '\t\t<key>LiveActivityAttributes</key>\n\t\t<array>\n';
+            for (const attr of props.liveActivityAttributes) {
+              attributesXml += `\t\t\t<string>${escapeXml(attr)}</string>\n`;
+            }
+            attributesXml += '\t\t</array>\n';
+            
+            // Insert LiveActivityAttributes before the closing </dict> tag of the Braze dict
+            // Match: </string> (end of Endpoint) followed by </dict> (end of Braze dict)
+            plistContent = plistContent.replace(/(\t\t<string>\$\(BRAZE_ENDPOINT\)<\/string>\s*)(<\/dict>)/, `$1${attributesXml}$2`);
+            
+            fs.writeFileSync(extensionInfoPlistPath, plistContent);
+          }
         }
 
         // Modify Podfile to include `BrazeNotificationService` and optionally `BrazeKit` for Live Activities.
