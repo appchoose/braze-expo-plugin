@@ -53,11 +53,13 @@
         }
         
         // Register the activity type if it's in the configured list
+        // The actual registration will be done in NotificationService+LiveActivity.swift
+        // registerPushToStart must be implemented in the extension file
         if activityAttributes.contains(activityType) {
-          // The actual registration will be done in NotificationService+LiveActivity.swift
-          // We call registerPushToStart which should be implemented in the extension
+          // Call registerPushToStart which should be implemented in NotificationService+LiveActivity.swift
+          // If not implemented, this will cause a compile error (which is expected)
           do {
-            try registerPushToStart(braze: braze, activityType: activityType)
+            try self.registerPushToStart(braze: braze, activityType: activityType)
             print("[NotificationService] Successfully registered push-to-start for activity type: \(activityType)")
           } catch {
             print("[NotificationService] Failed to register push-to-start: \(error.localizedDescription)")
@@ -99,18 +101,6 @@
         let braze = Braze(configuration: configuration)
         braze.changeUser(userId: userId)
         return braze
-      }
-      
-      /// Register push-to-start for the specified Live Activity type
-      /// This method should be implemented in NotificationService+LiveActivity.swift extension
-      @available(iOS 17.0, *)
-      func registerPushToStart(braze: Braze, activityType: String) throws {
-        // Default implementation - should be overridden in extension
-        throw NSError(
-          domain: "BrazeExpoPlugin",
-          code: 1,
-          userInfo: [NSLocalizedDescriptionKey: "registerPushToStart must be implemented in NotificationService+LiveActivity.swift"]
-        )
       }
     }
   #else
