@@ -1,20 +1,28 @@
 #if canImport(BrazeNotificationService)
   import BrazeNotificationService
+  import UserNotifications
 
   #if canImport(BrazeKit) && canImport(ActivityKit)
     import BrazeKit
     import ActivityKit
-    import UserNotifications
 
-    class NotificationService: BrazeNotificationService.NotificationService {
-      override func didReceive(_ request: UNNotificationRequest, withContentHandler contentHandler: @escaping (UNNotificationContent) -> Void) {
-        // Check if Live Activity registration is enabled and handle it first
+    class NotificationService: UNNotificationServiceExtension {
+      override func didReceive(
+        _ request: UNNotificationRequest,
+        withContentHandler contentHandler: @escaping (UNNotificationContent) -> Void
+      ) {
+        // Handle Live Activity registration first if needed
         if shouldHandleLiveActivity(request: request) {
           handleLiveActivityRegistration(request: request)
         }
         
-        // Call parent implementation for standard Braze notification handling
-        super.didReceive(request, withContentHandler: contentHandler)
+        // Handle standard Braze notifications
+        if brazeHandle(request: request, contentHandler: contentHandler) {
+          return
+        }
+        
+        // Fallback: just pass through the content
+        contentHandler(request.content)
       }
       
       /// Check if this notification should trigger Live Activity registration
@@ -46,6 +54,8 @@
         
         // Register the activity type if it's in the configured list
         if activityAttributes.contains(activityType) {
+          // The actual registration will be done in NotificationService+LiveActivity.swift
+          // We call registerPushToStart which should be implemented in the extension
           do {
             try registerPushToStart(braze: braze, activityType: activityType)
             print("[NotificationService] Successfully registered push-to-start for activity type: \(activityType)")
@@ -92,28 +102,31 @@
       }
       
       /// Register push-to-start for the specified Live Activity type
-      /// Override this method in your app code to register specific ActivityAttributes types
-      /// Example:
-      /// ```
-      /// override func registerPushToStart(braze: Braze, activityType: String) throws {
-      ///   switch activityType {
-      ///   case "YourActivityType":
-      ///     braze.liveActivities.registerPushToStart(
-      ///       forType: YourActivityAttributes.self,
-      ///       name: activityType
-      ///     )
-      ///   default:
-      ///     throw NSError(...)
-      ///   }
-      /// }
-      /// ```
+      /// This method should be implemented in NotificationService+LiveActivity.swift extension
       @available(iOS 17.0, *)
       func registerPushToStart(braze: Braze, activityType: String) throws {
-        // This method should be overridden in the app to register specific ActivityAttributes types
-        print("[NotificationService] Live Activity registration for type '\(activityType)' needs to be implemented in app code")
+        // Default implementation - should be overridden in extension
+        throw NSError(
+          domain: "BrazeExpoPlugin",
+          code: 1,
+          userInfo: [NSLocalizedDescriptionKey: "registerPushToStart must be implemented in NotificationService+LiveActivity.swift"]
+        )
       }
     }
   #else
-    class NotificationService: BrazeNotificationService.NotificationService {}
+    class NotificationService: UNNotificationServiceExtension {
+      override func didReceive(
+        _ request: UNNotificationRequest,
+        withContentHandler contentHandler: @escaping (UNNotificationContent) -> Void
+      ) {
+        // Handle standard Braze notifications
+        if brazeHandle(request: request, contentHandler: contentHandler) {
+          return
+        }
+        
+        // Fallback: just pass through the content
+        contentHandler(request.content)
+      }
+    }
   #endif
 #endif
