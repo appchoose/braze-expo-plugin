@@ -217,8 +217,7 @@ const withBrazeXcodeProject: ConfigPlugin<ConfigProps> = (config, props) => {
         config.modResults.addBuildPhase(
           [
             'UserNotifications.framework',
-            'ActivityKit.framework',
-            'BrazeKit.framework'
+            'ActivityKit.framework'
           ],
           'PBXFrameworksBuildPhase',
           'Frameworks',
@@ -315,19 +314,43 @@ const withBrazeDangerousMod: ConfigPlugin<ConfigProps> = (config, props) => {
           fs.copyFileSync(`${sourcePath}/${file}`, `${destinationPath}/${file}`);
         }
 
-        // Modify Podfile to include `BrazeNotificationService`.
+        // Modify Podfile to include `BrazeNotificationService` and optionally `BrazeKit` for Live Activities.
         const podfilePath = `${projectRoot}/ios/Podfile`;
         const podfile = fs.readFileSync(podfilePath);
         if (!podfile.includes(BRAZE_IOS_NOTIFICATION_SERVICE_POD)) {
+          let pods = `pod '${BRAZE_IOS_NOTIFICATION_SERVICE_POD}'`;
+          
+          // Add BrazeKit if Live Activity extension file is provided
+          if (props.iosLiveActivityExtensionFile != null) {
+            pods += `\n              pod 'BrazeKit'`;
+          }
+          
           const notificationServiceTarget =
           `
             target '${BRAZE_IOS_RICH_PUSH_TARGET}' do
               use_frameworks! :linkage => podfile_properties['ios.useFrameworks'].to_sym if podfile_properties['ios.useFrameworks']
               use_frameworks! :linkage => ENV['USE_FRAMEWORKS'].to_sym if ENV['USE_FRAMEWORKS']
-              pod '${BRAZE_IOS_NOTIFICATION_SERVICE_POD}'
+              ${pods}
             end
           `
           fs.appendFileSync(podfilePath, notificationServiceTarget);
+        } else if (props.iosLiveActivityExtensionFile != null) {
+          // If target already exists, check if we need to add BrazeKit
+          if (!podfile.includes("pod 'BrazeKit'")) {
+            // Read the file and find the target block
+            let podfileContent = fs.readFileSync(podfilePath, 'utf8');
+            const targetRegex = new RegExp(`(target '${BRAZE_IOS_RICH_PUSH_TARGET}' do[\\s\\S]*?)(pod '[^']+'\\s*)(end)`, 'm');
+            const match = podfileContent.match(targetRegex);
+            if (match) {
+              let updatedTarget = match[1];
+              if (!match[0].includes("pod 'BrazeKit'")) {
+                updatedTarget += `              pod 'BrazeKit'\n`;
+              }
+              updatedTarget += match[2] + match[3];
+              podfileContent = podfileContent.replace(targetRegex, updatedTarget);
+              fs.writeFileSync(podfilePath, podfileContent);
+            }
+          }
         }
 
         // Live Activity extension file is already copied in withBrazeXcodeProject
