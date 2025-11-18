@@ -12,7 +12,7 @@
         withContentHandler contentHandler: @escaping (UNNotificationContent) -> Void
       ) {
         // Handle Live Activity registration first if needed
-        if #available(iOS 17.0, *) {
+        if #available(iOS 17.2, *) {
           if shouldHandleLiveActivity(request: request) {
             handleLiveActivityRegistration(request: request)
           }
@@ -34,7 +34,7 @@
       }
       
       /// Handle Live Activity push-to-start registration via Braze
-      @available(iOS 17.0, *)
+      @available(iOS 17.2, *)
       private func handleLiveActivityRegistration(request: UNNotificationRequest) {
         guard let userInfo = request.content.userInfo as? [String: Any],
               let activityType = userInfo["activityType"] as? String,
