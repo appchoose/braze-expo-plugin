@@ -11,11 +11,18 @@
         _ request: UNNotificationRequest,
         withContentHandler contentHandler: @escaping (UNNotificationContent) -> Void
       ) {
+        print("[NotificationService] didReceive called")
         // Handle Live Activity registration first if needed
         if #available(iOS 17.2, *) {
+          print("[NotificationService] iOS 17.2+ available, checking for Live Activity")
           if shouldHandleLiveActivity(request: request) {
+            print("[NotificationService] Should handle Live Activity, calling handleLiveActivityRegistration")
             handleLiveActivityRegistration(request: request)
+          } else {
+            print("[NotificationService] Should not handle Live Activity - missing activityType or userId")
           }
+        } else {
+          print("[NotificationService] iOS version < 17.2, skipping Live Activity")
         }
         
         // Handle standard Braze notifications
@@ -36,17 +43,23 @@
       /// Handle Live Activity push-to-start registration via Braze
       @available(iOS 17.2, *)
       private func handleLiveActivityRegistration(request: UNNotificationRequest) {
+        print("[NotificationService] handleLiveActivityRegistration called")
         guard let userInfo = request.content.userInfo as? [String: Any],
               let activityType = userInfo["activityType"] as? String,
               let userId = userInfo["userId"] as? String else {
           print("[NotificationService] Missing required fields for Live Activity registration")
+          print("[NotificationService] userInfo: \(userInfo)")
           return
         }
+        
+        print("[NotificationService] Extracted activityType: \(activityType), userId: \(userId)")
         
         guard let braze = configureBraze(userId: userId) else {
           print("[NotificationService] Failed to configure Braze")
           return
         }
+        
+        print("[NotificationService] Braze configured successfully")
         
         // Get activity attributes from Info.plist
         guard let activityAttributes = getActivityAttributesFromConfig() else {
@@ -54,10 +67,13 @@
           return
         }
         
+        print("[NotificationService] Activity attributes from config: \(activityAttributes)")
+        
         // Register the activity type if it's in the configured list
         // The actual registration will be done in NotificationService+LiveActivity.swift
         // registerPushToStart must be implemented in the extension file
         if activityAttributes.contains(activityType) {
+          print("[NotificationService] Activity type '\(activityType)' found in configured attributes, calling registerPushToStart")
           // Call registerPushToStart which should be implemented in NotificationService+LiveActivity.swift
           // If not implemented, this will cause a compile error (which is expected)
           do {
@@ -65,9 +81,10 @@
             print("[NotificationService] Successfully registered push-to-start for activity type: \(activityType)")
           } catch {
             print("[NotificationService] Failed to register push-to-start: \(error.localizedDescription)")
+            print("[NotificationService] Error details: \(error)")
           }
         } else {
-          print("[NotificationService] Activity type '\(activityType)' not found in configured attributes")
+          print("[NotificationService] Activity type '\(activityType)' not found in configured attributes: \(activityAttributes)")
         }
       }
       
@@ -105,11 +122,15 @@
         _ request: UNNotificationRequest,
         withContentHandler contentHandler: @escaping (UNNotificationContent) -> Void
       ) {
+        print("[NotificationService] didReceive called (BrazeKit/ActivityKit not available)")
+        print("[NotificationService] userInfo: \(request.content.userInfo)")
         // Handle standard Braze notifications
         if brazeHandle(request: request, contentHandler: contentHandler) {
+          print("[NotificationService] Braze handled the notification")
           return
         }
         
+        print("[NotificationService] Braze did not handle notification, passing through content")
         // Fallback: just pass through the content
         contentHandler(request.content)
       }
