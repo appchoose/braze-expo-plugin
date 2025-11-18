@@ -12,8 +12,10 @@
         withContentHandler contentHandler: @escaping (UNNotificationContent) -> Void
       ) {
         // Handle Live Activity registration first if needed
-        if shouldHandleLiveActivity(request: request) {
-          handleLiveActivityRegistration(request: request)
+        if #available(iOS 17.0, *) {
+          if shouldHandleLiveActivity(request: request) {
+            handleLiveActivityRegistration(request: request)
+          }
         }
         
         // Handle standard Braze notifications
@@ -89,15 +91,7 @@
           return nil
         }
         
-        let configuration = Braze.Configuration(apiKey: apiKey, endpoint: endpoint)
-        
-        // Set log level if available
-        if let logLevel = brazeConfig["LogLevel"] as? Int {
-          configuration.logger.level = Braze.Logger.Level(rawValue: logLevel) ?? .info
-        } else {
-          configuration.logger.level = .info
-        }
-        
+        let configuration = Braze.Configuration(apiKey: apiKey, endpoint: endpoint)       
         let braze = Braze(configuration: configuration)
         braze.changeUser(userId: userId)
         return braze
