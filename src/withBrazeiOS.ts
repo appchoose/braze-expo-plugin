@@ -143,6 +143,23 @@ const withBrazeXcodeProject: ConfigPlugin<ConfigProps> = (config, props) => {
       // Also create if Live Activity is enabled (requires Rich Push extension)
       if ((props.enableBrazeIosRichPush === true || props.liveActivityAttributes != null) 
           && !config.modResults.pbxGroupByName(BRAZE_IOS_RICH_PUSH_TARGET)) {
+        // Copy Live Activity extension file early if provided (before creating PBX group)
+        const projectRoot = config.modRequest.projectRoot;
+        if (props.iosLiveActivityExtensionFile != null) {
+          const customFileSource = path.resolve(projectRoot, props.iosLiveActivityExtensionFile);
+          const destinationPath = `${projectRoot}/ios/${BRAZE_IOS_RICH_PUSH_TARGET}`;
+          if (!fs.existsSync(destinationPath)) {
+            fs.mkdirSync(destinationPath, { recursive: true });
+          }
+          const liveActivityExtensionPath = `${destinationPath}/NotificationService+LiveActivity.swift`;
+          
+          if (fs.existsSync(customFileSource)) {
+            fs.copyFileSync(customFileSource, liveActivityExtensionPath);
+          } else {
+            throw new Error(`Live Activity extension file not found: ${customFileSource}`);
+          }
+        }
+
         // Add the Notification Service Extension target.
         const richPushTarget = config.modResults.addTarget(
           BRAZE_IOS_RICH_PUSH_TARGET,
@@ -152,8 +169,13 @@ const withBrazeXcodeProject: ConfigPlugin<ConfigProps> = (config, props) => {
         );
 
         // Add the relevant files to the PBX group.
+        const richPushFiles = [...BRAZE_IOS_RICH_PUSH_FILES];
+        // Add Live Activity extension file if provided
+        if (props.iosLiveActivityExtensionFile != null) {
+          richPushFiles.push('NotificationService+LiveActivity.swift');
+        }
         const brazeNotificationServiceGroup = config.modResults.addPbxGroup(
-          BRAZE_IOS_RICH_PUSH_FILES,
+          richPushFiles,
           BRAZE_IOS_RICH_PUSH_TARGET,
           BRAZE_IOS_RICH_PUSH_TARGET,
         );
@@ -308,17 +330,8 @@ const withBrazeDangerousMod: ConfigPlugin<ConfigProps> = (config, props) => {
           fs.appendFileSync(podfilePath, notificationServiceTarget);
         }
 
-        // Copy Live Activity extension file if provided
-        if (props.iosLiveActivityExtensionFile != null) {
-          const customFileSource = path.resolve(projectRoot, props.iosLiveActivityExtensionFile);
-          const liveActivityExtensionPath = `${destinationPath}/NotificationService+LiveActivity.swift`;
-          
-          if (fs.existsSync(customFileSource)) {
-            fs.copyFileSync(customFileSource, liveActivityExtensionPath);
-          } else {
-            throw new Error(`Live Activity extension file not found: ${customFileSource}`);
-          }
-        }
+        // Live Activity extension file is already copied in withBrazeXcodeProject
+        // No need to copy it again here
       }
 
       // Modify the Podfile for Push Stories.
