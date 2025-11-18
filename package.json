@@ -1,5 +1,5 @@
 {
-  "name": "@braze/expo-plugin",
+  "name": "@appchoose/braze-expo-plugin",
   "version": "3.1.0",
   "description": "Config plugin for @braze/react-native-sdk package",
   "main": "build/withBraze.js",
@@ -17,7 +17,8 @@
   "homepage": "https://github.com/braze-inc/braze-expo-plugin#readme",
   "scripts": {
     "build": "expo-module build",
-    "clean": "expo-module clean"
+    "clean": "expo-module clean",
+    "release": "semantic-release"
   },
   "keywords": [
     "react",
@@ -35,8 +36,10 @@
   },
   "dependencies": {},
   "devDependencies": {
+    "@semantic-release/git": "^10.0.1",
     "expo": "^48.0.0",
-    "expo-module-scripts": "^3.0.4"
+    "expo-module-scripts": "^3.0.4",
+    "semantic-release": "^25.0.2"
   },
   "peerDependencies": {
     "expo": ">=47.0.0"
@@ -45,5 +48,8 @@
     "expo": {
       "optional": true
     }
+  },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
   }
 }

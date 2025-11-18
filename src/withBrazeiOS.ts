@@ -283,7 +283,7 @@ const withBrazeDangerousMod: ConfigPlugin<ConfigProps> = (config, props) => {
       // Also handle if Live Activity is enabled (requires Rich Push extension)
       if (props.enableBrazeIosRichPush === true || props.liveActivityAttributes != null) {
         // Copy Rich Push files to project path.
-        const absoluteSource = require.resolve('@braze/expo-plugin/ios/ExpoAdapterBraze/RichPush/NotificationService.swift');
+        const absoluteSource = require.resolve('@appchoose/braze-expo-plugin/ios/ExpoAdapterBraze/RichPush/NotificationService.swift');
         const sourcePath = path.dirname(absoluteSource);
         const destinationPath = `${projectRoot}/ios/${BRAZE_IOS_RICH_PUSH_TARGET}`;
         if (!fs.existsSync(`${destinationPath}`)) {
@@ -324,7 +324,7 @@ const withBrazeDangerousMod: ConfigPlugin<ConfigProps> = (config, props) => {
       // Modify the Podfile for Push Stories.
       if (props.enableBrazeIosPushStories === true) {
         // Copy Push Stories files to project path.
-        const absoluteSource = require.resolve('@braze/expo-plugin/ios/ExpoAdapterBraze/PushStories/NotificationViewController.swift');
+        const absoluteSource = require.resolve('@appchose/braze-expo-plugin/ios/ExpoAdapterBraze/PushStories/NotificationViewController.swift');
         const sourcePath = path.dirname(absoluteSource);
         const destinationPath = `${projectRoot}/ios/${BRAZE_IOS_PUSH_STORY_TARGET}`;
         if (!fs.existsSync(`${destinationPath}`)) {
