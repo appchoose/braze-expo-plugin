@@ -314,6 +314,46 @@ const withBrazeDangerousMod: ConfigPlugin<ConfigProps> = (config, props) => {
           fs.copyFileSync(`${sourcePath}/${file}`, `${destinationPath}/${file}`);
         }
 
+        // Modify the extension's Info.plist to include Braze configuration
+        const extensionInfoPlistPath = `${destinationPath}/${BRAZE_IOS_RICH_PUSH_TARGET}-Info.plist`;
+        if (fs.existsSync(extensionInfoPlistPath) && props.iosApiKey) {
+          let plistContent = fs.readFileSync(extensionInfoPlistPath, 'utf8');
+          
+          // Helper function to escape XML special characters
+          const escapeXml = (str: string): string => {
+            return str
+              .replace(/&/g, '&amp;')
+              .replace(/</g, '&lt;')
+              .replace(/>/g, '&gt;')
+              .replace(/"/g, '&quot;')
+              .replace(/'/g, '&apos;');
+          };
+          
+          // Remove existing Braze configuration if present
+          plistContent = plistContent.replace(/<key>Braze<\/key>\s*<dict>[\s\S]*?<\/dict>/g, '');
+          
+          // Build Braze configuration XML
+          let brazeConfigXml = '\t<key>Braze</key>\n\t<dict>\n';
+          brazeConfigXml += `\t\t<key>ApiKey</key>\n\t\t<string>${escapeXml(props.iosApiKey)}</string>\n`;
+          if (props.baseUrl) {
+            brazeConfigXml += `\t\t<key>Endpoint</key>\n\t\t<string>${escapeXml(props.baseUrl)}</string>\n`;
+          }
+          if (props.liveActivityAttributes != null) {
+            brazeConfigXml += '\t\t<key>LiveActivityAttributes</key>\n\t\t<array>\n';
+            for (const attr of props.liveActivityAttributes) {
+              brazeConfigXml += `\t\t\t<string>${escapeXml(attr)}</string>\n`;
+            }
+            brazeConfigXml += '\t\t</array>\n';
+          }
+          brazeConfigXml += '\t</dict>\n';
+          
+          // Insert Braze configuration before the closing </dict> tag (root dict)
+          // Match the root closing </dict> tag followed by </plist>
+          plistContent = plistContent.replace(/(<\/dict>\s*<\/plist>)/, `${brazeConfigXml}$1`);
+          
+          fs.writeFileSync(extensionInfoPlistPath, plistContent);
+        }
+
         // Modify Podfile to include `BrazeNotificationService` and optionally `BrazeKit` for Live Activities.
         const podfilePath = `${projectRoot}/ios/Podfile`;
         const podfile = fs.readFileSync(podfilePath);
