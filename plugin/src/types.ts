@@ -19,4 +19,6 @@ export type ConfigProps = {
   firebaseCloudMessagingSenderId?: string;
   androidHandlePushDeepLinksAutomatically?: boolean;
   iosUseUUIDAsDeviceId?: boolean;
+  liveActivityAttributes?: string[];
+  iosLiveActivityExtensionFile?: string;
 };

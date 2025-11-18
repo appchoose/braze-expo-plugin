@@ -79,6 +79,10 @@ const withBrazeInfoPlist: ConfigPlugin<ConfigProps> = (config, props) => {
       if (props.iosUseUUIDAsDeviceId != null) {
         config.modResults.Braze.UseUUIDAsDeviceId = props.iosUseUUIDAsDeviceId;
       }
+
+      if (props.liveActivityAttributes != null) {
+        config.modResults.Braze.LiveActivityAttributes = props.liveActivityAttributes;
+      }
     }
 
     return config;
@@ -105,7 +109,7 @@ const withBrazeEntitlements: ConfigPlugin<ConfigProps> = (config, props) => {
 const withBrazeXcodeProject: ConfigPlugin<ConfigProps> = (config, props) => {
   return withXcodeProject(config, (config) => {
 
-    if (props.enableBrazeIosRichPush === true || props.enableBrazeIosPushStories === true) {
+    if (props.enableBrazeIosRichPush === true || props.enableBrazeIosPushStories === true || props.liveActivityAttributes != null) {
       // Initialize with an empty object if these top-level objects are non-existent.
       // This guarantees that the extension targets will have a destination.
       const objects = config.modResults.hash.project.objects;
@@ -136,7 +140,9 @@ const withBrazeXcodeProject: ConfigPlugin<ConfigProps> = (config, props) => {
       }
 
       // Rich Push Notification Service Extension
-      if (props.enableBrazeIosRichPush === true && !config.modResults.pbxGroupByName(BRAZE_IOS_RICH_PUSH_TARGET)) {
+      // Also create if Live Activity is enabled (requires Rich Push extension)
+      if ((props.enableBrazeIosRichPush === true || props.liveActivityAttributes != null) 
+          && !config.modResults.pbxGroupByName(BRAZE_IOS_RICH_PUSH_TARGET)) {
         // Add the Notification Service Extension target.
         const richPushTarget = config.modResults.addTarget(
           BRAZE_IOS_RICH_PUSH_TARGET,
@@ -174,17 +180,24 @@ const withBrazeXcodeProject: ConfigPlugin<ConfigProps> = (config, props) => {
         }
 
         // Set up target build phase scripts.
+        const sourceFiles = ['NotificationService.swift'];
+        // Add Live Activity extension if provided
+        if (props.iosLiveActivityExtensionFile != null) {
+          sourceFiles.push('NotificationService+LiveActivity.swift');
+        }
         config.modResults.addBuildPhase(
-          [
-            'NotificationService.swift',
-          ],
+          sourceFiles,
           'PBXSourcesBuildPhase',
           'Sources',
           richPushTarget.uuid
         );
 
         config.modResults.addBuildPhase(
-          ['UserNotifications.framework'],
+          [
+            'UserNotifications.framework',
+            'ActivityKit.framework',
+            'BrazeKit.framework'
+          ],
           'PBXFrameworksBuildPhase',
           'Frameworks',
           richPushTarget.uuid
@@ -267,7 +280,8 @@ const withBrazeDangerousMod: ConfigPlugin<ConfigProps> = (config, props) => {
       const projectRoot = config.modRequest.projectRoot;
 
       // Modify the Podfile for rich push.
-      if (props.enableBrazeIosRichPush === true) {
+      // Also handle if Live Activity is enabled (requires Rich Push extension)
+      if (props.enableBrazeIosRichPush === true || props.liveActivityAttributes != null) {
         // Copy Rich Push files to project path.
         const absoluteSource = require.resolve('@braze/expo-plugin/ios/ExpoAdapterBraze/RichPush/NotificationService.swift');
         const sourcePath = path.dirname(absoluteSource);
@@ -292,6 +306,18 @@ const withBrazeDangerousMod: ConfigPlugin<ConfigProps> = (config, props) => {
             end
           `
           fs.appendFileSync(podfilePath, notificationServiceTarget);
+        }
+
+        // Copy Live Activity extension file if provided
+        if (props.iosLiveActivityExtensionFile != null) {
+          const customFileSource = path.resolve(projectRoot, props.iosLiveActivityExtensionFile);
+          const liveActivityExtensionPath = `${destinationPath}/NotificationService+LiveActivity.swift`;
+          
+          if (fs.existsSync(customFileSource)) {
+            fs.copyFileSync(customFileSource, liveActivityExtensionPath);
+          } else {
+            throw new Error(`Live Activity extension file not found: ${customFileSource}`);
+          }
         }
       }
 
