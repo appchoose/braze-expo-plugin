@@ -48,7 +48,6 @@
               let activityType = userInfo["activityType"] as? String,
               let userId = userInfo["userId"] as? String else {
           print("[NotificationService] Missing required fields for Live Activity registration")
-          print("[NotificationService] userInfo: \(userInfo)")
           return
         }
         
@@ -123,7 +122,6 @@
         withContentHandler contentHandler: @escaping (UNNotificationContent) -> Void
       ) {
         print("[NotificationService] didReceive called (BrazeKit/ActivityKit not available)")
-        print("[NotificationService] userInfo: \(request.content.userInfo)")
         // Handle standard Braze notifications
         if brazeHandle(request: request, contentHandler: contentHandler) {
           print("[NotificationService] Braze handled the notification")
