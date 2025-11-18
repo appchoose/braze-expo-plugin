@@ -226,7 +226,8 @@ const withBrazeXcodeProject: ConfigPlugin<ConfigProps> = (config, props) => {
         config.modResults.addBuildPhase(
           [
             'UserNotifications.framework',
-            'ActivityKit.framework'
+            'ActivityKit.framework',
+            'BrazeKit.framework'
           ],
           'PBXFrameworksBuildPhase',
           'Frameworks',
